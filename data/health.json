@@ -1,20 +1,17 @@
 {
+  "NOT_Binance": true,
   "billing": "public_standard_GitHub_Actions_expected_free_actual_billing_unverified",
-  "checked_at_utc": "2026-10-17T06:32:35Z",
-  "errors": [
-    {
-      "error": "ValueError: 1h data is stale or job delayed over 30 minutes",
-      "host": "https://data-api.binance.vision"
-    },
-    {
-      "error": "HTTPError: HTTP Error 451: ",
-      "host": "https://api.binance.com"
-    }
-  ],
+  "checked_at_utc": "2026-10-17T07:22:58Z",
+  "data_sha256": "98120c048dc35e25feedf8be5d8c023cd2aa09650825db9c0808415eb2bee34a",
   "forecast_mode": "UNVALIDATED_TECHNICAL_BASELINE_NO_MACRO_QUALITY_GATE",
+  "latest_synchronized_hour": "2026-10-17T07:00:00Z",
+  "market_venue": "KrakenSpot",
+  "new_prediction_ids": [],
   "new_predictions": 0,
+  "quote_currency": "USDT",
   "real_orders_enabled": false,
-  "source_status": "DATA_INCOMPLETE",
+  "source_host": "https://api.kraken.com",
+  "source_status": "OK",
   "stats": {
     "1h": {
       "accuracy": null,
