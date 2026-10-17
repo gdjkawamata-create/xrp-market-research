@@ -1,0 +1,41 @@
+{
+  "billing": "public_standard_GitHub_Actions_expected_free_actual_billing_unverified",
+  "checked_at_utc": "2026-10-17T06:32:35Z",
+  "errors": [
+    {
+      "error": "ValueError: 1h data is stale or job delayed over 30 minutes",
+      "host": "https://data-api.binance.vision"
+    },
+    {
+      "error": "HTTPError: HTTP Error 451: ",
+      "host": "https://api.binance.com"
+    }
+  ],
+  "forecast_mode": "UNVALIDATED_TECHNICAL_BASELINE_NO_MACRO_QUALITY_GATE",
+  "new_predictions": 0,
+  "real_orders_enabled": false,
+  "source_status": "DATA_INCOMPLETE",
+  "stats": {
+    "1h": {
+      "accuracy": null,
+      "baseline_accuracy": null,
+      "graded": 0,
+      "hits": 0,
+      "published": 0
+    },
+    "3h": {
+      "accuracy": null,
+      "baseline_accuracy": null,
+      "graded": 0,
+      "hits": 0,
+      "published": 0
+    },
+    "4h": {
+      "accuracy": null,
+      "baseline_accuracy": null,
+      "graded": 0,
+      "hits": 0,
+      "published": 0
+    }
+  }
+}
