@@ -1,0 +1,276 @@
+# この1ファイルをGitHubの .github/workflows/xrp.yml にコピーしてください。
+# 公開リポジトリ専用。公開の市場価格と予測ログだけを保存します。
+# 有料APIなし、取引注文なし、個人アカウント情報なし。
+name: XRP free public-market research
+on:
+  schedule:
+    - cron: '13 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: xrp-hourly-ledger
+  cancel-in-progress: false
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Collect and audit, without API keys or orders
+        shell: bash
+        run: |
+          cat > /tmp/xrp_market_engine.py <<'XRP_PYTHON_END'
+          #!/usr/bin/env python3
+          """Public Binance Spot market-data collector & locked research forecast auditor.
+
+          NO API keys, NO paid services, NO orders, NO LLM calls.
+          The deterministic candidate is NOT validated investment advice.
+          """
+          from __future__ import annotations
+          import argparse
+          import datetime as dt
+          import hashlib
+          import json
+          import math
+          import os
+          from pathlib import Path
+          import statistics
+          import sys
+          import time
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          UTC = dt.timezone.utc
+          SYMS = ('XRPUSDT', 'BTCUSDT', 'ETHUSDT')
+          HOSTS = ('https://data-api.binance.vision', 'https://api.binance.com')
+          STEPS = {'15m':900, '1h':3600, '4h':14400, '1d':86400}
+          FETCH_LEN = {'15m':160,'1h':380,'4h':150,'1d':125}
+          HORIZONS = (1, 3, 4)
+          EPOCH = dt.datetime(1970,1,1,tzinfo=UTC)
+
+
+          def now_utc(): return dt.datetime.now(UTC)
+          def iso(seconds):return dt.datetime.fromtimestamp(seconds,UTC).isoformat().replace('+00:00','Z')
+          def parse_time(s):return dt.datetime.fromisoformat(s.replace('Z','+00:00')).timestamp()
+          def load_json(path, default):
+              p=Path(path)
+              if not p.exists():return default
+              return json.loads(p.read_text(encoding='utf-8'))
+          def dump_json(path, value):
+              p=Path(path);p.parent.mkdir(parents=True,exist_ok=True)
+              tmp=p.with_suffix(p.suffix+'.tmp')
+              tmp.write_text(json.dumps(value,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf-8')
+              os.replace(tmp,p)
+
+          def _get_json(host, symbol, interval, limit, timeout=12):
+              q=urllib.parse.urlencode({'symbol':symbol,'interval':interval,'limit':limit})
+              url=host+'/api/v3/klines?'+q
+              req=urllib.request.Request(url,headers={'User-Agent':'XRP-Public-Research-Only/2.0','Accept':'application/json'})
+              with urllib.request.urlopen(req,timeout=timeout) as response:
+                  if response.status!=200:raise RuntimeError('HTTP '+str(response.status))
+                  return json.load(response)
+
+          def normalize_klines(raw, interval, observed_s):
+              """Reject malformed candles/partial bars; ensure gap-free native interval."""
+              if not isinstance(raw,list) or not raw:raise ValueError('Empty or invalid API result')
+              sec=STEPS[interval]
+              out=[]
+              for r in raw:
+                  if not isinstance(r,list) or len(r)<9:raise ValueError('Malformed kline')
+                  t=int(r[0])//1000
+                  # strictly closed and past observation time; avoid unclosed current bar
+                  if t+sec > observed_s:continue
+                  if t % sec != 0:raise ValueError('Unaligned candle')
+                  o,h,l,c,v=map(float,r[1:6])
+                  if not all(map(math.isfinite,(o,h,l,c,v))) or min(o,h,l,c)<=0 or v<0:raise ValueError('Bad OHLCV')
+                  if l>min(o,c) or h<max(o,c) or l>h:raise ValueError('Inconsistent OHLC')
+                  out.append([t,o,h,l,c,v])
+              if len(out)<120:raise ValueError('Insufficient closed candles')
+              for a,b in zip(out,out[1:]):
+                  if b[0]-a[0]!=sec:raise ValueError(f'Gap or duplicate at {a[0]} -> {b[0]}')
+              return out
+
+          def derive_3h(rows):
+              if not rows:raise ValueError('Missing 1h rows')
+              g={}
+              for r in rows:
+                  t=r[0]
+                  if t%3600:raise ValueError('Unaligned 1h')
+                  anchor=t-(t%(3*3600))
+                  g.setdefault(anchor,[]).append(r)
+              result=[]
+              for a,part in sorted(g.items()):
+                  if len(part)!=3 or [r[0] for r in part]!=[a,a+3600,a+7200]:
+                      if a in (min(g),max(g)):continue
+                      raise ValueError('Missing 1h candle within 3h group')
+                  result.append([a,part[0][1],max(r[2] for r in part),min(r[3] for r in part),part[-1][4],sum(r[5] for r in part)])
+              if len(result)<100:raise ValueError('Insufficient derived 3h history')
+              for a,b in zip(result,result[1:]):
+                  if b[0]-a[0]!=10800:raise ValueError('Derived 3h has a gap')
+              return result
+
+          def get_market(now_s, getter=_get_json):
+              """All 3 assets, native four intervals, derived 3h, one shared API host.
+
+              Never mix hosts in one snapshot. Fallback only by restarting whole snapshot.
+              """
+              errors=[]
+              for host in HOSTS:
+                  try:
+                      market={}; observed={}
+                      for sym in SYMS:
+                          market[sym]={}
+                          for interval,limit in FETCH_LEN.items():
+                              raw=getter(host,sym,interval,limit)
+                              series=normalize_klines(raw,interval,now_s)
+                              market[sym][interval]=series
+                          market[sym]['3h']=derive_3h(market[sym]['1h'])
+                      # 1h same UTC latest completed hour for all assets.
+                      last={sym:market[sym]['1h'][-1][0]+3600 for sym in SYMS}
+                      if len(set(last.values()))!=1:raise ValueError('BTC/ETH/XRP latest 1h close time mismatch')
+                      anchor=next(iter(last.values()))
+                      if not (now_s-1800 <= anchor <= now_s):
+                          raise ValueError('1h data is stale or job delayed over 30 minutes')
+                      for sym in SYMS:
+                          for interval in ('15m','1h','3h','4h','1d'):
+                              close=market[sym][interval][-1][0]+({'3h':10800}|STEPS)[interval]
+                              if close>now_s:raise ValueError('Future/incomplete candle')
+                              if now_s-close >= ({'15m':1500,'1h':5400,'3h':13000,'4h':16500,'1d':90000}[interval]):
+                                  raise ValueError(f'Stale interval: {sym}/{interval}')
+                      return {'status':'OK','host':host,'anchor':anchor,'market':market,'observed_at':iso(now_s)}
+                  except Exception as e:
+                      errors.append({'host':host,'error':f'{type(e).__name__}: {e}'})
+              return {'status':'DATA_INCOMPLETE','errors':errors,'observed_at':iso(now_s)}
+
+          def movavg(xs,n):return sum(xs[-n:])/n
+
+          def trend(row):
+              if len(row)<100:return 0
+              c=[r[4] for r in row]
+              m7=movavg(c,7);m25=movavg(c,25);m99=movavg(c,99)
+              prev7=sum(c[-8:-1])/7
+              # one fixed technical-only candidate, not optimized using test outcomes
+              if m7>m25>m99 and m7>prev7 and c[-1]>m7:return 1
+              if m7<m25<m99 and m7<prev7 and c[-1]<m7:return -1
+              return 0
+
+          def predict(market,horizon):
+              timeframe={1:'1h',3:'3h',4:'4h'}[horizon]
+              dirs={sym:trend(market[sym][timeframe]) for sym in SYMS}
+              x=dirs['XRPUSDT']
+              if x==0 or dirs['BTCUSDT']!=x or dirs['ETHUSDT']!=x:return 'ABSTAIN'
+              # new trade signals not produced if XRP intrabar macro/event risk not checked
+              return 'UP' if x>0 else 'DOWN'
+
+          def label(reference, actual, threshold=0.005):
+              ret=actual/reference-1
+              return 'UP' if ret>=threshold else ('DOWN' if ret<=-threshold else 'FLAT')
+
+          def score_matured(audit, forecasts, market, anchor):
+              """Only matured forecasts with matching closed 1h target are scored."""
+              lookup={row[0]+3600:row[4] for row in market['XRPUSDT']['1h']}
+              existing={x['forecast_id'] for x in audit}
+              new=[]
+              for f in forecasts:
+                  if f['forecast_id'] in existing or f['target_close_epoch']>anchor:continue
+                  p=lookup.get(f['target_close_epoch'])
+                  if p is None:continue # retain pending, never invent
+                  actual=label(f['reference_price'],p)
+                  new.append({'forecast_id':f['forecast_id'],'target_utc':iso(f['target_close_epoch']),
+                              'actual_price':p,'actual_label':actual,'predicted_label':f['direction'],
+                              'hit':f['direction']==actual,'baseline_label':f.get('baseline_direction','MISSING'),
+                              'baseline_hit':f.get('baseline_direction')==actual, 'absolute_move_pct':round(abs(p/f['reference_price']-1)*100,5),
+                              'evaluated_on_utc':iso(anchor)})
+              return audit+new
+
+          def stats(forecasts,audit):
+              byid={f['forecast_id']:f for f in forecasts}
+              result={}
+              for h in HORIZONS:
+                  allf=[f for f in forecasts if f['horizon_hours']==h]
+                  evals=[x for x in audit if x['forecast_id'] in byid and byid[x['forecast_id']]['horizon_hours']==h]
+                  wins=sum(x['hit'] for x in evals)
+                  result[str(h)+'h']={'published':len(allf),'graded':len(evals),'hits':wins,
+                                      'accuracy':None if not evals else round(wins/len(evals),5),
+                                      'baseline_accuracy':None if not evals else round(sum(x.get('baseline_hit',False) for x in evals)/len(evals),5)}
+              return result
+
+          def run(directory, market_result, now_s):
+              folder=Path(directory);folder.mkdir(parents=True,exist_ok=True)
+              forefile=folder/'forecasts.json';auditfile=folder/'audits.json'
+              forecasts=load_json(forefile,[]);audit=load_json(auditfile,[])
+              health={'checked_at_utc':iso(now_s),'source_status':market_result['status'],
+                      'forecast_mode':'UNVALIDATED_TECHNICAL_BASELINE_NO_MACRO_QUALITY_GATE',
+                      'real_orders_enabled':False,'billing':'public_standard_GitHub_Actions_expected_free_actual_billing_unverified'}
+              if market_result['status']!='OK':
+                  health['errors']=market_result.get('errors',[])
+                  health['new_predictions']=0
+                  health['stats']=stats(forecasts,audit)
+                  dump_json(folder/'health.json',health)
+                  return health
+              anchor=market_result['anchor'];market=market_result['market']
+              # audit past predictions before generating new ones; target must be finalized
+              audit=score_matured(audit,forecasts,market,anchor)
+              priorids={x['forecast_id'] for x in forecasts}
+              fresh=[]
+              ref=market['XRPUSDT']['1h'][-1][4]
+              for horizon in HORIZONS:
+                  if anchor%(horizon*3600)!=0:continue # non-overlapping horizon windows
+                  k=f'BINANCE-SPOT-XRP-{anchor}-{horizon}h-v2'
+                  if k in priorids:continue
+                  direction=predict(market,horizon)
+                  if direction=='ABSTAIN':continue
+                  closes=market['XRPUSDT']['1h']
+                  prior_close=closes[-1-horizon][4]
+                  naive_direction=label(prior_close,ref)
+                  fresh.append({'forecast_id':k,'model_version':'technical_only_v2_frozen',
+                                'market':'BinanceSpot:XRPUSDT','created_at_utc':iso(now_s),
+                                'reference_close_utc':iso(anchor),'reference_close_epoch':anchor,
+                                'reference_price':ref,'target_close_utc':iso(anchor+horizon*3600),
+                                'target_close_epoch':anchor+horizon*3600,'horizon_hours':horizon,
+                                'direction':direction, 'baseline_direction':naive_direction,'flat_threshold_return':0.005,
+                                'source_host':market_result['host'],
+                                'input_latest_1h_close':iso(anchor),
+                                'context':'technical_only_no_verified_news_or_OI',
+                                'NOT_A_TRADE_SIGNAL':True})
+              forecasts+=fresh
+              dump_json(forefile,forecasts);dump_json(auditfile,audit)
+              # Save ONLY public market data, no balances, keys, account details
+              snap={'generated_at_utc':iso(now_s),'host':market_result['host'],
+                    'data':{sym:{iv:rows for iv,rows in m.items()} for sym,m in market.items()}}
+              dump_json(folder/'latest_candles.json',snap)
+              health.update({'source_host':market_result['host'],'latest_synchronized_hour':iso(anchor),
+                             'new_predictions':len(fresh),'new_prediction_ids':[x['forecast_id'] for x in fresh],
+                             'stats':stats(forecasts,audit),
+                             'data_sha256':hashlib.sha256(json.dumps(snap,sort_keys=True).encode()).hexdigest()})
+              dump_json(folder/'health.json',health)
+              return health
+
+          def main():
+              p=argparse.ArgumentParser();p.add_argument('--output',default='data');p.add_argument('--now-utc',default=None)
+              args=p.parse_args()
+              n=round(now_utc().timestamp()) if args.now_utc is None else int(parse_time(args.now_utc))
+              m=get_market(n)
+              r=run(args.output,m,n)
+              print(json.dumps(r,ensure_ascii=False,indent=2))
+              if r['source_status']!='OK':sys.exit(2)
+          if __name__=='__main__':main()
+          XRP_PYTHON_END
+          python /tmp/xrp_market_engine.py --output data || true
+      - name: Commit time-stamped logs
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/
+          if ! git diff --cached --quiet; then
+            git commit -m 'Append public-data research snapshot and scored predictions'
+            git push
+          fi
