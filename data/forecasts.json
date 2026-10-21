@@ -378,5 +378,24 @@
     "source_host": "https://api.kraken.com",
     "target_close_epoch": 1792573200,
     "target_close_utc": "2026-10-21T09:00:00Z"
+  },
+  {
+    "NOT_A_TRADE_SIGNAL": true,
+    "baseline_direction": "UP",
+    "context": "technical_only_no_verified_news_or_OI",
+    "created_at_utc": "2026-10-21T10:39:30Z",
+    "direction": "UP",
+    "flat_threshold_return": 0.005,
+    "forecast_id": "KRAKEN-SPOT-XRP-1792576800-1h-v2.2",
+    "horizon_hours": 1,
+    "input_latest_1h_close": "2026-10-21T10:00:00Z",
+    "market": "KrakenSpot:XRPUSDT",
+    "model_version": "technical_only_v2_frozen",
+    "reference_close_epoch": 1792576800,
+    "reference_close_utc": "2026-10-21T10:00:00Z",
+    "reference_price": 1.3563,
+    "source_host": "https://api.kraken.com",
+    "target_close_epoch": 1792580400,
+    "target_close_utc": "2026-10-21T11:00:00Z"
   }
 ]
