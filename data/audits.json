@@ -1162,5 +1162,17 @@
     "hit": true,
     "predicted_label": "DOWN",
     "target_utc": "2026-11-07T00:00:00Z"
+  },
+  {
+    "absolute_move_pct": 0.08427,
+    "actual_label": "FLAT",
+    "actual_price": 1.16397,
+    "baseline_hit": true,
+    "baseline_label": "FLAT",
+    "evaluated_on_utc": "2026-11-07T19:00:00Z",
+    "forecast_id": "KRAKEN-SPOT-XRP-1794074400-1h-v2.2",
+    "hit": false,
+    "predicted_label": "DOWN",
+    "target_utc": "2026-11-07T19:00:00Z"
   }
 ]
