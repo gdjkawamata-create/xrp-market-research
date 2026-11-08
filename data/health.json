@@ -1,10 +1,10 @@
 {
   "NOT_Binance": true,
   "billing": "public_standard_GitHub_Actions_expected_free_actual_billing_unverified",
-  "checked_at_utc": "2026-11-07T23:39:59Z",
-  "data_sha256": "6f30d2c86976195c6ea12cb62a79145d7c8dd7c85b21b6494e0954d82a702ae2",
+  "checked_at_utc": "2026-11-08T01:06:53Z",
+  "data_sha256": "edfd77553d4ba5c6a3e71d5c566a3f6ecf0ce778ebc74396dbe067164483befb",
   "forecast_mode": "UNVALIDATED_TECHNICAL_BASELINE_NO_MACRO_QUALITY_GATE",
-  "latest_synchronized_hour": "2026-11-07T23:00:00Z",
+  "latest_synchronized_hour": "2026-11-08T01:00:00Z",
   "market_venue": "KrakenSpot",
   "new_prediction_ids": [],
   "new_predictions": 0,
@@ -21,9 +21,9 @@
       "published": 61
     },
     "3h": {
-      "accuracy": 0.23529,
-      "baseline_accuracy": 0.05882,
-      "graded": 17,
+      "accuracy": 0.22222,
+      "baseline_accuracy": 0.05556,
+      "graded": 18,
       "hits": 4,
       "published": 18
     },
