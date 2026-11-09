@@ -1,17 +1,19 @@
 {
   "NOT_Binance": true,
   "billing": "public_standard_GitHub_Actions_expected_free_actual_billing_unverified",
-  "checked_at_utc": "2026-11-09T19:58:32Z",
-  "data_sha256": "16cca2871f7a9b67d5d66975d86ccf54336d7d0dbb9efa2173e5de2ad04bf467",
+  "checked_at_utc": "2026-11-09T20:56:22Z",
+  "errors": [
+    {
+      "error": "TimeoutError: The read operation timed out",
+      "host": "https://api.kraken.com"
+    }
+  ],
   "forecast_mode": "UNVALIDATED_TECHNICAL_BASELINE_NO_MACRO_QUALITY_GATE",
-  "latest_synchronized_hour": "2026-11-09T19:00:00Z",
   "market_venue": "KrakenSpot",
-  "new_prediction_ids": [],
   "new_predictions": 0,
   "quote_currency": "USDT",
   "real_orders_enabled": false,
-  "source_host": "https://api.kraken.com",
-  "source_status": "OK",
+  "source_status": "DATA_INCOMPLETE",
   "stats": {
     "1h": {
       "accuracy": 0.16418,
