@@ -1,15 +1,13 @@
 {
   "NOT_Binance": true,
   "billing": "public_standard_GitHub_Actions_expected_free_actual_billing_unverified",
-  "checked_at_utc": "2026-11-12T09:05:12Z",
-  "data_sha256": "b1e53300e81f5e9cc2f9f569c22eaddeec0b0a300975db5ac83081019b5b4a23",
+  "checked_at_utc": "2026-11-12T10:06:45Z",
+  "data_sha256": "a7b9fa4f9d412196b218c6bf94aa1073f72378dd8a6125d109f619f23e8591de",
   "forecast_mode": "UNVALIDATED_TECHNICAL_BASELINE_NO_MACRO_QUALITY_GATE",
-  "latest_synchronized_hour": "2026-11-12T09:00:00Z",
+  "latest_synchronized_hour": "2026-11-12T10:00:00Z",
   "market_venue": "KrakenSpot",
-  "new_prediction_ids": [
-    "KRAKEN-SPOT-XRP-1794474000-3h-v2.2"
-  ],
-  "new_predictions": 1,
+  "new_prediction_ids": [],
+  "new_predictions": 0,
   "quote_currency": "USDT",
   "real_orders_enabled": false,
   "source_host": "https://api.kraken.com",
