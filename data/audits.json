@@ -1702,5 +1702,29 @@
     "hit": false,
     "predicted_label": "DOWN",
     "target_utc": "2026-11-12T21:00:00Z"
+  },
+  {
+    "absolute_move_pct": 0.71318,
+    "actual_label": "UP",
+    "actual_price": 1.04077,
+    "baseline_hit": true,
+    "baseline_label": "UP",
+    "evaluated_on_utc": "2026-11-13T01:00:00Z",
+    "forecast_id": "KRAKEN-SPOT-XRP-1794513600-4h-v2.2",
+    "hit": false,
+    "predicted_label": "DOWN",
+    "target_utc": "2026-11-13T00:00:00Z"
+  },
+  {
+    "absolute_move_pct": 0.58373,
+    "actual_label": "UP",
+    "actual_price": 1.04077,
+    "baseline_hit": false,
+    "baseline_label": "FLAT",
+    "evaluated_on_utc": "2026-11-13T01:00:00Z",
+    "forecast_id": "KRAKEN-SPOT-XRP-1794517200-3h-v2.2",
+    "hit": false,
+    "predicted_label": "DOWN",
+    "target_utc": "2026-11-13T00:00:00Z"
   }
 ]
