@@ -1,27 +1,26 @@
 {
   "NOT_Binance": true,
   "billing": "public_standard_GitHub_Actions_expected_free_actual_billing_unverified",
-  "checked_at_utc": "2026-11-13T03:57:00Z",
-  "data_sha256": "96a389300a1505700460e505953dce4e4692af530f8859ed75491d8f439e7f6a",
+  "checked_at_utc": "2026-11-13T05:02:00Z",
+  "data_sha256": "5fb0373d87cceeebf5661a33ecee1fbadb7d07c6697a81b210f45a547fe9ede7",
   "forecast_mode": "UNVALIDATED_TECHNICAL_BASELINE_NO_MACRO_QUALITY_GATE",
-  "latest_synchronized_hour": "2026-11-13T03:00:00Z",
+  "latest_synchronized_hour": "2026-11-13T05:00:00Z",
   "market_venue": "KrakenSpot",
   "new_prediction_ids": [
-    "KRAKEN-SPOT-XRP-1794538800-1h-v2.2",
-    "KRAKEN-SPOT-XRP-1794538800-3h-v2.2"
+    "KRAKEN-SPOT-XRP-1794546000-1h-v2.2"
   ],
-  "new_predictions": 2,
+  "new_predictions": 1,
   "quote_currency": "USDT",
   "real_orders_enabled": false,
   "source_host": "https://api.kraken.com",
   "source_status": "OK",
   "stats": {
     "1h": {
-      "accuracy": 0.16867,
-      "baseline_accuracy": 0.51807,
-      "graded": 83,
-      "hits": 14,
-      "published": 84
+      "accuracy": 0.17857,
+      "baseline_accuracy": 0.52381,
+      "graded": 84,
+      "hits": 15,
+      "published": 85
     },
     "3h": {
       "accuracy": 0.33333,
